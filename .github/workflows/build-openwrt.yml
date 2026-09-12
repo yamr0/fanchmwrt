@@ -1,0 +1,84 @@
+name: Build OpenWrt
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      SSH_DEBUG:
+        description: 'SSH debug'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REPO_URL: https://github.com/fanchmwrt/fanchmwrt
+  REPO_BRANCH: fanchmwrt-25.12.4
+  FEED_CONF: feeds.conf.default
+  TMP_PATH: openwrt
+  CONFIG_FILE: .config
+  DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Initialization environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses-dev gawk flex bison qemu-utils python3 python3-pip unzip libssl-dev git wget curl rsync time uuid-runtime
+
+      - name: Clone source code
+        run: |
+          git clone --depth=1 -b ${{ env.REPO_BRANCH }} https://mirror.ghproxy.com/${{ env.REPO_URL }} ${{ env.TMP_PATH }}
+          cd ${{ env.TMP_PATH }}
+          cp ../${{ env.CONFIG_FILE }} .
+          cp ../${{ env.DIY_P1_SH }} .
+          cp ../${{ env.DIY_P2_SH }} .
+
+      - name: Run diy-part1.sh
+        run: |
+          cd ${{ env.TMP_PATH }}
+          chmod +x ${{ env.DIY_P1_SH }}
+          ./${{ env.DIY_P1_SH }}
+
+      - name: Update feeds
+        run: |
+          cd ${{ env.TMP_PATH }}
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Run diy-part2.sh
+        run: |
+          cd ${{ env.TMP_PATH }}
+          chmod +x ${{ env.DIY_P2_SH }}
+          ./${{ env.DIY_P2_SH }}
+
+      - name: SSH Debug
+        if: ${{ github.event.inputs.SSH_DEBUG == 'true' }}
+        uses: P3TERX/debugger-action@main
+
+      - name: Download package
+        run: |
+          cd ${{ env.TMP_PATH }}
+          make -j$(nproc) download
+
+      - name: Compile firmware
+        run: |
+          cd ${{ env.TMP_PATH }}
+          make -j$(nproc)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: OpenWrt-Firmware
+          path: ${{ env.TMP_PATH }}/bin/targets
