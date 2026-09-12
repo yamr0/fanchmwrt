@@ -33,7 +33,7 @@ jobs:
 
       - name: Clone source code
         run: |
-          git clone --depth=1 -b ${{ env.REPO_BRANCH }} https://mirror.ghproxy.com/${{ env.REPO_URL }} ${{ env.TMP_PATH }}
+          git clone --depth=1 -b ${{ env.REPO_BRANCH }} ${{ env.REPO_URL }} ${{ env.TMP_PATH }}
           cd ${{ env.TMP_PATH }}
           cp ../${{ env.CONFIG_FILE }} .
           cp ../${{ env.DIY_P1_SH }} .
