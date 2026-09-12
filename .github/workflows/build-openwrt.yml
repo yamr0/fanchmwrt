@@ -6,12 +6,6 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      SSH_DEBUG:
-        description: 'SSH debug'
-        required: false
-        default: false
-        type: boolean
 
 env:
   REPO_URL: https://github.com/fanchmwrt/fanchmwrt
@@ -62,10 +56,6 @@ jobs:
           cd ${{ env.TMP_PATH }}
           chmod +x ${{ env.DIY_P2_SH }}
           ./${{ env.DIY_P2_SH }}
-
-      - name: SSH Debug
-        if: ${{ github.event.inputs.SSH_DEBUG == 'true' }}
-        uses: P3TERX/debugger-action@main
 
       - name: Download package
         run: |
